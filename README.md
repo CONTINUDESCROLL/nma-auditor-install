@@ -19,8 +19,12 @@ et appuie sur Entrée :
 curl -fsSL https://raw.githubusercontent.com/CONTINUDESCROLL/nma-auditor-install/main/install.sh | bash
 ```
 
-Une fenêtre te demandera le **jeton d'accès** que Tom t'a envoyé. Tout s'installe
-dans ton dossier personnel, sans mot de passe administrateur.
+Une fenêtre te demandera le **jeton d'accès** que Tom t'a envoyé, puis le **dossier**
+où installer l'application (elle ira dans un sous-dossier « NMA Auditor »). Aucun mot
+de passe administrateur n'est demandé.
+
+Si NMA Auditor est déjà installé, l'installeur le détecte et propose « Mettre à jour
+ici » (tes audits sont conservés) ou « Installer ailleurs ».
 
 ---
 
@@ -30,7 +34,7 @@ dans ton dossier personnel, sans mot de passe administrateur.
 |---|---|---|
 | 1 | Vérification de ton Mac | instantané |
 | 2 | Jeton d'accès | quelques secondes |
-| 3 | Dossier `NMA Auditor` dans ton dossier personnel | instantané |
+| 3 | Choix du dossier d'installation | quelques secondes |
 | 4 | Node, ffmpeg, yt-dlp | 1 à 3 minutes |
 | 5 | Moteur de transcription (Python + modèle Whisper, 1,4 Go) | 5 à 15 minutes, instantané si Derush Studio est déjà installé |
 | 6 | L'application, un lanceur sur le Bureau | quelques secondes |
