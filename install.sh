@@ -139,15 +139,54 @@ done
 # ----------------------------------------------------------------------------- 3. emplacement
 etape 3 "Où installer l'application"
 mkdir -p "$HOME/.nma-auditor"
-ANCIEN="$(cat "$MARQUEUR" 2>/dev/null)"; [ -n "$ANCIEN" ] && [ ! -f "$ANCIEN/server.mjs" ] && ANCIEN=""
-[ -z "$ANCIEN" ] && [ -f "$HOME/NMA Auditor/server.mjs" ] && ANCIEN="$HOME/NMA Auditor"
-if [ -n "$ANCIEN" ]; then
-  APP="$ANCIEN"; vert "installation existante : mise à jour sur place ($APP)"; gris "tes audits (dossier projects) sont conservés"
-else
-  APP="$HOME/NMA Auditor"; mkdir -p "$APP" 2>/dev/null || fatal "Impossible d'écrire dans « $APP »."
-  vert "$APP"
+ANCIEN="$(cat "$MARQUEUR" 2>/dev/null)"
+if [ -n "$ANCIEN" ] && [ ! -f "$ANCIEN/server.mjs" ]; then
+  case "$ANCIEN" in /Volumes/*) VOL="/Volumes/$(printf '%s' "${ANCIEN#/Volumes/}" | cut -d/ -f1)"
+    [ -d "$VOL" ] || fatal "Le disque « $(basename "$VOL") » n'est pas branché." "Ton installation et tes audits sont dessus : branche-le et relance." ;; esac
+  ANCIEN=""
 fi
+[ -z "$ANCIEN" ] && [ -f "$HOME/NMA Auditor/server.mjs" ] && ANCIEN="$HOME/NMA Auditor"
+choisir_dossier() { osascript <<'AS' 2>/dev/null
+try
+  set d to choose folder with prompt "Dans quel dossier installer NMA Auditor ?" default location (path to home folder)
+  return POSIX path of d
+on error
+  return ""
+end try
+AS
+}
+if [ -n "$ANCIEN" ]; then
+  NAUD=0; [ -d "$ANCIEN/projects" ] && NAUD=$(ls -1 "$ANCIEN/projects" 2>/dev/null | wc -l | tr -d ' ')
+  echo "  Une installation existe déjà :"; gris "$ANCIEN"; [ "$NAUD" -gt 0 ] && gris "elle contient $NAUD audit(s)"
+  REP=$(osascript <<AS 2>/dev/null
+try
+  set r to display dialog "NMA Auditor est déjà installé ici :
+
+$ANCIEN
+
+$NAUD audit(s) s'y trouvent." with title "NMA Auditor — installation" buttons {"Annuler","Installer ailleurs","Mettre à jour ici"} default button "Mettre à jour ici"
+  return button returned of r
+on error
+  return ""
+end try
+AS
+)
+  case "$REP" in
+    "Mettre à jour ici") APP="$ANCIEN"; vert "mise à jour sur place — tes audits sont conservés" ;;
+    "Installer ailleurs") CHOIX=$(choisir_dossier); [ -n "$CHOIX" ] || fatal "Installation annulée : aucun dossier choisi."
+      APP="${CHOIX%/}/NMA Auditor"; [ "$APP" = "$ANCIEN" ] && fatal "C'est le dossier de l'installation existante." "Relance et prends « Mettre à jour ici »."
+      gris "l'ancienne installation reste en place : $ANCIEN (tu pourras déplacer son dossier projects)" ;;
+    *) fatal "Installation annulée." "Rien n'a été modifié." ;;
+  esac
+else
+  echo "  Une fenêtre te demande de choisir un dossier (l'application ira dans un sous-dossier « NMA Auditor »)."
+  CHOIX=$(choisir_dossier); [ -n "$CHOIX" ] || fatal "Installation annulée : aucun dossier choisi." "Relance la commande et choisis un dossier."
+  APP="${CHOIX%/}/NMA Auditor"
+fi
+mkdir -p "$APP" 2>/dev/null || fatal "Impossible d'écrire dans « $APP »." "Choisis un dossier de ton dossier personnel."
+[ -w "$APP" ] || fatal "« $APP » n'est pas modifiable." "Choisis un autre dossier."
 printf '%s' "$APP" > "$MARQUEUR"
+vert "$APP"
 
 # ----------------------------------------------------------------------------- 4. outils
 telecharger() { for essai in 1 2 3 4 5; do curl -sfL -C - --connect-timeout 20 --speed-limit 2048 --speed-time 60 -o "$2" "$1" && [ -s "$2" ] && return 0; [ "$essai" -lt 5 ] && gris "connexion interrompue — reprise $essai/4…"; sleep 3; done; return 1; }
