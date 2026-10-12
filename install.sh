@@ -23,14 +23,17 @@ ETAPES=6
 
 JETON=""; export JETON
 armer_git() { JETON="$1"; ASKPASS=$(mktemp); chmod 700 "$ASKPASS"
-  printf '#!/bin/sh\ncase "$1" in *sername*) echo x-access-token ;; *) printf "%%s" "$JETON" ;; esac\n' > "$ASKPASS"
+  # nom d'utilisateur = le propriétaire du dépôt (ce que GitHub attend avec un jeton personnel) ; mot de passe = le jeton
+  printf '#!/bin/sh\ncase "$1" in *sername*) echo %s ;; *) printf "%%s" "$JETON" ;; esac\n' "${DEPOT%%/*}" > "$ASKPASS"
   export GIT_ASKPASS="$ASKPASS"; }
 ranger_jeton() {                      # $1 = dossier de l'application : pour les mises à jour depuis l'app
   [ -d "$1/.git" ] || return 0
   git -C "$1" remote set-url origin "https://github.com/$DEPOT.git" 2>/dev/null
-  printf 'https://x-access-token:%s@github.com\n' "$JETON" > "$1/.git/.identifiants"
+  printf 'https://%s:%s@github.com\n' "${DEPOT%%/*}" "$JETON" > "$1/.git/.identifiants"
   chmod 600 "$1/.git/.identifiants"
-  git -C "$1" config credential.helper "store --file=$1/.git/.identifiants"
+  # le trousseau macOS peut contenir un autre compte GitHub (celui du salarié) : on l'écarte pour ce dépôt, seul le jeton compte
+  git -C "$1" config credential.helper ""
+  git -C "$1" config --add credential.helper "store --file=$1/.git/.identifiants"
   chmod 600 "$1/.git/config" 2>/dev/null; }
 
 as_txt() { printf '%s' "${1:-}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
@@ -238,13 +241,14 @@ fi
 etape 6 "Application"
 if [ -d "$APP/.git" ]; then
   ranger_jeton "$APP"
-  if git -C "$APP" fetch --quiet origin && git -C "$APP" reset --hard --quiet origin/main; then chmod 600 "$APP/.git/config"; vert "mise à jour effectuée"
+  if git -C "$APP" -c credential.helper= fetch --quiet origin && git -C "$APP" reset --hard --quiet origin/main; then chmod 600 "$APP/.git/config"; vert "mise à jour effectuée"
   else chmod 600 "$APP/.git/config"; fatal "La mise à jour n'a pas pu être récupérée." "Vérifie ta connexion ou demande un nouveau jeton. L'application existante n'a pas été modifiée."; fi
 else
   RESTE=$(ls -A "$APP" 2>/dev/null | grep -v -e '^\.DS_Store$' -e '^\._' || true)
   [ -z "$RESTE" ] || fatal "« $APP » n'est pas vide." "Vide ce dossier ou supprime-le, puis relance."
   gris "téléchargement de l'application…"
-  git clone --quiet "https://github.com/$DEPOT.git" "$APP" || fatal "Téléchargement de l'application impossible."
+  # -c credential.helper= : ignore le trousseau macOS (un autre compte GitHub y serait pris à la place du jeton)
+  git -c credential.helper= clone --quiet "https://github.com/$DEPOT.git" "$APP" || fatal "Téléchargement de l'application impossible." "Si le message dit « Write access to repository not granted », le jeton n'a pas la permission Contents sur nma-auditor, ou un autre compte GitHub est enregistré dans le trousseau de ce Mac."
   ranger_jeton "$APP"; vert "application installée"
 fi
 mkdir -p "$APP/projects"
