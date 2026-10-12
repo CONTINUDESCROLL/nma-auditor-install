@@ -124,7 +124,8 @@ while true; do
     if [ -z "$JETON" ]; then ERREUR="Le champ était vide."; rouge "  ✗ $ERREUR"; continue; fi; fi
   JETON=$(printf '%s' "$JETON" | tr -d '[:space:]'); gris "vérification… (jeton de ${#JETON} caractères)"
   CFG=$(mktemp); chmod 600 "$CFG"; printf 'header = "Authorization: Bearer %s"\n' "$JETON" > "$CFG"
-  CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --config "$CFG" "https://api.github.com/repos/$DEPOT"); rm -f "$CFG"
+  # lecture du contenu (pas seulement des métadonnées) : un jeton « fine-grained » sans la permission Contents répond 200 sur le dépôt mais 403 au téléchargement
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --config "$CFG" "https://api.github.com/repos/$DEPOT/contents/README.md"); rm -f "$CFG"
   case "$CODE" in
     200) vert "jeton valide"; armer_git "$JETON"; break ;;
     401) ERREUR="Jeton refusé : incomplet, mal collé ou expiré." ;;
