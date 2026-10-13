@@ -33,7 +33,9 @@ ranger_jeton() {                      # $1 = dossier de l'application : pour les
   chmod 600 "$1/.git/.identifiants"
   # le trousseau macOS peut contenir un autre compte GitHub (celui du salarié) : on l'écarte pour ce dépôt, seul le jeton compte
   git -C "$1" config credential.helper ""
-  git -C "$1" config --add credential.helper "store --file=$1/.git/.identifiants"
+  # chemin entre guillemets : le dossier s'appelle « NMA Auditor » (espace) et git passe cette commande par le shell ;
+  # sans guillemets le chemin était coupé en deux et le jeton jamais lu (« GitHub injoignable » dans l'application, 13/10/2026)
+  git -C "$1" config --add credential.helper "store --file=\"$1/.git/.identifiants\""
   chmod 600 "$1/.git/config" 2>/dev/null; }
 
 as_txt() { printf '%s' "${1:-}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
@@ -278,5 +280,7 @@ printf "\033[1;32m  INSTALLATION TERMINÉE\033[0m\n"; echo ""
 echo "  Pour lancer NMA Auditor : double-clique sur « NMA Auditor » (Bureau ou Applications)."
 echo "  Au premier lancement, ouvre Réglages et colle les clés (Anthropic, Apify, Cloudflare)."
 echo ""
+# une application déjà ouverte garde l'ancien code en mémoire : on l'arrête pour que la version installée soit celle qui tourne
+if curl -s http://localhost:4400/api/env >/dev/null 2>&1; then lsof -ti tcp:4400 2>/dev/null | xargs kill 2>/dev/null; sleep 2; gris "application redémarrée avec la nouvelle version"; fi
 bash "$APP/Lancer NMA Auditor.command" >/dev/null 2>&1 &
 exit 0
