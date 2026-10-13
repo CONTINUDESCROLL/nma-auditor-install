@@ -263,14 +263,19 @@ open http://localhost:4400
 echo "NMA Auditor est ouvert dans le navigateur. Tu peux fermer cette fenêtre."
 LANCEUR
 chmod +x "$APP/Lancer NMA Auditor.command" 2>/dev/null
-raccourci_vers() { [ -d "$1" ] || return 1; { printf '#!/bin/bash\nexec /bin/bash "%s/Lancer NMA Auditor.command"\n' "$APP" > "$1/NMA Auditor.command"; } 2>/dev/null || return 1; chmod +x "$1/NMA Auditor.command" 2>/dev/null; }
+raccourci_vers() { [ -d "$1" ] || return 1
+  # une vraie application (double-clic sans fenêtre Terminal) ; à défaut, un .command
+  local S; S=$(mktemp); printf 'do shell script "/bin/bash " & quoted form of "%s/Lancer NMA Auditor.command" & " >/dev/null 2>&1 &"\n' "$APP" > "$S"
+  rm -rf "$1/NMA Auditor.app" "$1/NMA Auditor.command" 2>/dev/null
+  if osacompile -o "$1/NMA Auditor.app" "$S" >/dev/null 2>&1; then rm -f "$S"; return 0; fi; rm -f "$S"
+  { printf '#!/bin/bash\nexec /bin/bash "%s/Lancer NMA Auditor.command"\n' "$APP" > "$1/NMA Auditor.command"; } 2>/dev/null || return 1; chmod +x "$1/NMA Auditor.command" 2>/dev/null; }
 if raccourci_vers "$HOME/Desktop"; then vert "raccourci créé sur le Bureau"; elif mkdir -p "$HOME/Applications" 2>/dev/null && raccourci_vers "$HOME/Applications"; then vert "raccourci créé dans ton dossier Applications"; else gris "raccourci impossible — le lanceur reste dans le dossier de l'application"; fi
 
 # ----------------------------------------------------------------------------- terminé
 echo ""; printf "\033[1m  VÉRIFICATION FINALE\033[0m\n"; verifier "$APP"; echo ""
 if [ "$PROBLEMES" -gt 0 ]; then rouge "  $PROBLEMES point(s) à régler :$SOUCIS"; echo ""; echo "  Relance la commande : elle reprend là où ça a échoué."; echo ""; exit 1; fi
 printf "\033[1;32m  INSTALLATION TERMINÉE\033[0m\n"; echo ""
-echo "  Pour lancer NMA Auditor : double-clique sur « NMA Auditor.command » (Bureau ou Applications)."
+echo "  Pour lancer NMA Auditor : double-clique sur « NMA Auditor » (Bureau ou Applications)."
 echo "  Au premier lancement, ouvre Réglages et colle les clés (Anthropic, Apify, Cloudflare)."
 echo ""
 bash "$APP/Lancer NMA Auditor.command" >/dev/null 2>&1 &
