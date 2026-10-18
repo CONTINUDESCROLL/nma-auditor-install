@@ -269,7 +269,10 @@ raccourci_vers() { [ -d "$1" ] || return 1
   # une vraie application (double-clic sans fenêtre Terminal) ; à défaut, un .command
   local S; S=$(mktemp); printf 'do shell script "/bin/bash " & quoted form of "%s/Lancer NMA Auditor.command" & " >/dev/null 2>&1 &"\n' "$APP" > "$S"
   rm -rf "$1/NMA Auditor.app" "$1/NMA Auditor.command" 2>/dev/null
-  if osacompile -o "$1/NMA Auditor.app" "$S" >/dev/null 2>&1; then rm -f "$S"; return 0; fi; rm -f "$S"
+  if osacompile -o "$1/NMA Auditor.app" "$S" >/dev/null 2>&1; then rm -f "$S"
+    # le logo de NMA Auditor sur le raccourci (re-signé localement, sinon macOS refuse de l'ouvrir)
+    if [ -f "$APP/public/icone/NMA-Auditor.icns" ]; then cp "$APP/public/icone/NMA-Auditor.icns" "$1/NMA Auditor.app/Contents/Resources/applet.icns" 2>/dev/null && codesign --force --sign - "$1/NMA Auditor.app" >/dev/null 2>&1; touch "$1/NMA Auditor.app"; fi
+    return 0; fi; rm -f "$S"
   { printf '#!/bin/bash\nexec /bin/bash "%s/Lancer NMA Auditor.command"\n' "$APP" > "$1/NMA Auditor.command"; } 2>/dev/null || return 1; chmod +x "$1/NMA Auditor.command" 2>/dev/null; }
 if raccourci_vers "$HOME/Desktop"; then vert "raccourci créé sur le Bureau"; elif mkdir -p "$HOME/Applications" 2>/dev/null && raccourci_vers "$HOME/Applications"; then vert "raccourci créé dans ton dossier Applications"; else gris "raccourci impossible — le lanceur reste dans le dossier de l'application"; fi
 
